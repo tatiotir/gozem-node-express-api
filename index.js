@@ -8,12 +8,13 @@ app.use(express.json());
 const key = "";
 
 app.post('/api/get_distance_and_time', (request, response) => {
+    let units = request.body.units;
     let origins = request.body.start.lat + ',' + request.body.start.lng;
     let destinations = request.body.end.lat + ',' + request.body.end.lng;
     let timestamp = (new Date().getTime() / 1000).toFixed(0);
 
     let request1 = axios.get("https://maps.googleapis.com/maps/api/distancematrix/json?origins=" + origins
-        + "&destinations=" + destinations + "&key=" + key);
+        + "&destinations=" + destinations + "&units=" + units + "&key=" + key);
     let request2 = axios.get("https://maps.googleapis.com/maps/api/timezone/json?location=" + origins
         + "&timestamp=" + timestamp + "&key=" + key);
     let request3 = axios.get("https://maps.googleapis.com/maps/api/timezone/json?location=" + destinations
@@ -22,7 +23,7 @@ app.post('/api/get_distance_and_time', (request, response) => {
     axios.all([request1, request2, request3]).then(axios.spread((...res) => {
         let distance = {
             value: 0,
-            units: 'km'
+            units: units === 'metric' ? 'km' : 'mi'
         };
 
         let timeDiff = {
@@ -50,7 +51,12 @@ app.post('/api/get_distance_and_time', (request, response) => {
                 if (elements.length > 0) {
                     const element = elements[0];
                     if (element['distance']) {
-                        distance.value = (element.distance['value'] / 1000).toFixed(0);
+                        if (units === 'metric') {
+                            distance.value = (element.distance['value'] / 1000).toFixed(0);
+                        }
+                        else {
+                            distance.value = (element.distance['value'] * 0.000621371).toFixed(0);
+                        }
                     }
                 }
             }
